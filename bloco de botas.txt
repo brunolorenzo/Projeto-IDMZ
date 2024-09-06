@@ -1,0 +1,66 @@
+#Interface:
+enable
+config term
+int gig1/3
+nameif inside
+security-level 100
+ip address 10.1.1.18 255.255.255.252
+no shutdown
+
+int gig1/2
+nameif dmz
+security-level 50
+ip address 172.16.0.14 255.255.255.252
+no shutdown
+
+int gig1/1
+nameif outside
+security-level 0
+ip address 209.165.200.226 255.255.255.252
+no shutdown
+
+# Rota para rede externa
+route outside 0.0.0.0 0.0.0.0 209.165.200.225
+
+# Permitir que a rede interna acesse a DMZ e Outside
+access-list inside_acl extended permit ip 10.1.1.16 255.255.255.252 any
+
+# Permitir que a DMZ acesse a rede externa na porta do HTTPS (443)
+access-list dmz_acl extended permit tcp 172.16.0.12 255.255.255.252 host 209.165.201.254 eq 443
+
+# Bloquear acesso da rede externa para a rede DMZ e rede interna
+access-list outside_acl extended deny ip any 10.1.1.16 255.255.255.252
+access-list outside_acl extended deny ip any 172.16.0.12 255.255.255.252
+
+# Permitir retorno da rede externa se iniciado por uma das redes internas ou DMZ
+access-list outside_acl extended permit ip any any
+
+# Permitir apenas a sub-rede "Suporte Remoto (DMZ)" acessar as plantas
+//access-list Remote_Support_to_Plants permit ip 172.16.0.8 255.255.255.252 192.168.1.0 255.255.255.192
+access-list Remote_Support_to_Plants permit ip 172.16.0.8 255.255.255.252 192.168.2.0 255.255.255.192
+access-list Remote_Support_to_Plants permit ip 172.16.0.8 255.255.255.252 192.168.3.0 255.255.255.192
+//access-list Remote_Support_to_Plants permit ip 172.16.0.8 255.255.255.252 192.168.4.0 255.255.255.192
+access-list Remote_Support_to_Plants permit ip 172.16.0.8 255.255.255.252 192.168.5.0 255.255.255.192
+# Permitir apenas a sub-rede "Suporte remoto (DMZ)" acesse as redes internas das plantas - via tcp
+access-list Remote_Support_to_Plants extended permit tcp 172.16.0.8 255.255.255.252 10.1.1.16 255.255.255.252 eq 1111
+access-list Remote_Support_to_Plants extended permit tcp 172.16.0.8 255.255.255.252 10.1.1.16 255.255.255.252 eq 4444
+
+
+# Aplicação nas interfaces
+access-group inside_acl in interface inside
+access-group dmz_acl in interface dmz
+access-group outside_acl in interface outside
+access-group Remote_Support_to_Plants in interface dmz
+
+# NAT Dinâmico para a Rede Interna (Inside):
+object network obj_inside
+subnet 192.168.0.0 255.255.0.0
+nat (inside,outside) dynamic interface
+nat (inside,dmz) dynamic interface
+
+# NAT Dinâmico para a Rede DMZ:
+object network obj_dmz
+subnet 172.16.0.0 255.255.255.252
+nat (dmz,outside) dynamic interface
+nat (dmz,inside) dynamic interface 
+

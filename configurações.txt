@@ -1,0 +1,142 @@
+1) Definir endereçamento IP
+Todos os CLPs estão configurado com o último endereço disponível: Ex: 192.168.1.62
+O endereço dos PC da planta é representado pelo número dele: Ex: PC40 - planta 3: 192.168.3.40
+
+2) Configuração da interface sub-rede e roteador:
+> enable
+> configure terminal
+> int faz/z (z = porta conectada da rede) (poder ser gig, se, depende da porta conectada)
+> ip add 192.168.x.1 255.255.255.y (x = sub-rede e y = mascara)
+> no shutdown (Porta = UP)
+
+---------------------------------------------------------------
+3) Configuração da interface entre roteadores
+
+3.1 - Definir o IP da interface de conexão entre os roteadores.
+OBS: Subnet Mask: 255.255.255.252 (/30)
+
+================Roteador 1=================
+(Conexão com Roteador 2):
+IP Address: 10.1.1.1
+
+(Conexão com Roteador 3):
+IP Address: 10.1.1.5
+
+(Conexão com o Firewall):
+IP Address: 10.0.0.1
+
+
+================Roteador 2=================
+(Conexão com Roteador 1):
+IP Address: 10.1.1.2
+
+(Conexão com Roteador 3):
+IP Address: 10.1.1.9
+
+
+================Roteador 3=================
+(Conexão com Roteador 1):
+IP Address: 10.1.1.6
+
+(Conexão com Roteador 2):
+IP Address: 10.1.1.9
+
+Conexão com Roteador 4):
+IP Address: 10.1.1.13
+
+
+================Roteador 4=================
+(Conexão com Roteador 3):
+IP Address: 10.1.1.14
+
+
+================Roteador 5=================
+(Conexão com Roteador 6):
+IP Address: 172.16.0.1
+
+(Conexão com Roteador 7):
+IP Address: 172.16.0.5
+
+
+
+================Roteador 6=================
+(Conexão com Roteador 5):
+IP Address: 172.16.0.2
+
+(Conexão com Roteador 7):
+IP Address: 172.16.0.9
+
+
+================Roteador 7=================
+(Conexão com Roteador 5):
+IP Address: 172.16.0.6
+
+(Conexão com Roteador 7):
+IP Address: 172.16.0.10
+
+(Conexão com o Firewall):
+IP Address: 172.16.1.1
+
+Adicionar em cada roteador:
+> enable
+> configure terminal
+> int faz/z (z = porta conectada da rede) (poder ser gig, se, depende da porta conectada)
+> ip add 10.1.1.x 255.255.255.y (x = sub-rede e y = mascara)
+> no shutdown (Porta = UP)
+
+---------------------------------------------------------------
+
+4) Configuração LOOPBACK dos roteadores
+> enable
+> config term
+> int loopback 0
+> ip add ip_loopback 255.255.255.0
+> no sh
+
+ROTEADOR 1: 1.1.1.1
+ROTEADOR 2: 2.2.2.2
+ROTEADOR 3: 3.3.3.3
+ROTEADOR 4: 4.4.4.4
+ROTEADOR 5: 5.5.5.5
+ROTEADOR 6: 6.6.6.6
+ROTEADOR 7: 7.7.7.7
+ROTEADOR 9: 9.9.9.9
+
+
+
+5) Roteamento OSPF
+> enable
+> config term
+> router ospf 10
+> router-id [endereço loopback]
+> network [endereço ip (HOST)] [mascara wildcard] area[numero, 0 para backbone] (define as redes que estão diretamente conectadas ao roteador)
+> network [endereço ip 2 (HOST)] [mascara wildcard] area[numero]
+> network [endereço ip 3 (HOST)] [mascara wildcard] area[numero]
+> network [endereço loopback (HOST)] [mascara wildcard] area[numero] 
+
+Roteador 1,2,3,5,6,7, 9: area 0 (backbone)
+Roteador 4: area 4
+
+Verificar tabela de roteamento:
+> show ip route
+
+6) Firewall
+6.1 Configuração da interface
+> enable
+> config term
+> int [interface]
+> nameif [nome]
+> security-level [nivel (mais alto mais seguro)]
+> ip address [endereço] [mascara]
+> no shutdown
+
+
+
+6.2 Configuração de rotas: Adicionar rotas estáticas para garantir a conectividade entre as redes
+Rota para rede externa
+> route outside 0.0.0.0 0.0.0.0 209.165.200.226
+Isso cria uma rota padrão, que envia qualquer tráfego destinado a fora da rede (ou que não tenha uma rota específica) para a interface externa.
+
+6.3 Configuração das ACLs
+
+6.4 Configuração do NAT
